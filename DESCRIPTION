@@ -1,0 +1,13 @@
+Package: NHSPD
+Type: Package
+Title: NHS Postcode Directory
+Version: 0.1
+Date: 2016-01-15
+Author: Wei Liang Yap
+Maintainer: Wei Liang Yap <yapweiliang@yahoo.co.uk>
+Description: download/process NHS Postcode Directory into a form I want; reload locally saved RDS data.
+License: GPL(>=2)
+LazyData: TRUE
+Depends:
+    data.table, tools, readxl, stringr
+RoxygenNote: 5.0.1
