@@ -1,16 +1,32 @@
 # NHSPD.r
-# NHS Postcode Directory is a specially tailored dataset based on ONS Postcode Directory
-#
-# on comparing NHSPD data (November 2015) with OS CodePoint Open 2015.4.0 (October 2015),
-# at least the England postcodes with grid coordinates are identical to OS CodePoint
-# except for 4 postcodes where NHSPD data seems correct if plotted on map
-# (TR210AA, TR210PR, TR210PW, TR210WY labelled as Isles of Scilly on CodePoint vs Cornwall on NHSPD)
-# therefore this can now supercede my r codepoint library
-
-# http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata
-# http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata/zip-files/gridall.zip
-
-# TODO: error checking for CodePoint stuff
+#' NHS Postcode Directory
+#'
+#' download/process NHS Postcode Directory into a form I want; reload locally saved RDS data.
+#'
+#' @section Background:
+#' The NHS Postcode Directory is a specially tailored dataset based on ONS Postcode Directory.
+#'
+#' In particular, each postcode is mapped to a LSOA, so this enables linking to the
+#' Index of Multiple Deprivation.
+#'
+#' Download from:
+#' \itemize{
+#'  \item \url{http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata}
+#'  \item \url{http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata/zip-files/gridall.zip}
+#' }
+#'
+#' This library therefore supercedes my \pkg{codepoint} library.
+#'
+#' on comparing NHSPD data (November 2015) with OS CodePoint Open 2015.4.0 (October 2015),
+#' at least the England postcodes with grid coordinates are identical to OS CodePoint
+#' except for 4 postcodes where NHSPD data seems correct if plotted on map
+#' (TR210AA, TR210PR, TR210PW, TR210WY labelled as Isles of Scilly on CodePoint vs Cornwall on NHSPD)
+#'
+#' @section TODO:
+#' TODO: error checking for CodePoint stuff
+#' @docType package
+#' @name NHSPD
+NULL
 
 .citations <- function(year = 2015) {
   s1 <- paste0("Contains Ordnance Survey data (C) Crown copyright and database right ", year)
@@ -118,14 +134,17 @@
 
 # getCodePointAreaCodes ---------------------------------------------------
 
-#' getCodePointAreaCodes
+#' get CodePoint area codes
+#'
+#' obtain the names of all the area codes from an unzipped OS CodePoint Open zipped file
+#' and compile them into format that I want
 #'
 #' @param codepoint.doc.path full path to where we can find the unzipped xls/xlsx files that contain area code names
 #'
-#' @return data.frame compiled list of all the area codes
+#' @return data.frame, compiled list of all the area codes
 #' @export
 #'
-#' @examples
+#' @examples \dontshow{getCodePointAreaCodes()}
 getCodePointAreaCodes <- function( codepoint.doc.path = paste(.default_CodePoint_Unzipped_Path, "Doc", sep = "/") ) {
 
   codelist.xl.file    <- paste(codepoint.doc.path, .codelist.xl.filename, sep = "/")
