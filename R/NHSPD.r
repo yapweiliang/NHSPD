@@ -254,8 +254,6 @@ getNHSPD <- function( gridall.file = .default_gridall_DataFile,
   # clean up the data
   message(sprintf("getNHSPD() cleaning up data..."))
 
-  setnames(z, "PCD2", "PCD8")
-
   if (only.England) {
     z <- subset(z, CTRY == "E92000001")
   }
@@ -272,12 +270,12 @@ getNHSPD <- function( gridall.file = .default_gridall_DataFile,
   }
 
   if (codepoint.compatible) {
-    setnames(z, c("OSEAST1M","OSNRTH1M"), c("Eastings", "Northings"))
+    setnames(z, c("OSEAST1M", "OSNRTH1M", "PCD2"), c("Eastings", "Northings", "Postcode"))
     z[, Eastings:=as.integer(Eastings)]
     z[, Northings:=as.integer(Northings)]
 
     #z$Postcode <- paste0(str_sub(z$PCD8,1,4),str_sub(z$PCD8,-3,-1)) # make it the same format as CodePoint database
-    z[, Postcode:=paste0(str_sub(PCD8, 1, 4), str_sub(PCD8, -3, -1))]
+    z[, Postcode:=paste0(str_sub(Postcode, 1, 4), str_sub(Postcode, -3, -1))]
     # z$Admin_county_code <- z$OSCTY # ? to factorise // probably can remove
     z[, Admin_district_code:=OSLAUA] # ? to factorise
 
