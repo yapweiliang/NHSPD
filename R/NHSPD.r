@@ -9,34 +9,8 @@
 #' In particular, each postcode is mapped to a LSOA, so this enables linking to the
 #' Index of Multiple Deprivation.
 #'
-#' @section Sources:
-#'
-#' Download from:
-#' \itemize{
-#'  \item \url{http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata}
-#'  \item \url{http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata/zip-files/gridall.zip}
-#' }
-#' (allow the library to do that for you)
-#'
-#' This library therefore supercedes my \pkg{codepoint} library.
-#'
-#' However it references the area code names.  These can be obtained from:
-#'
-#' \bold{ONS}
-#'
-#' \url{https://geoportal.statistics.gov.uk/Docs/Names\%20and\%20Codes/Local_Authority_Districts_(UK)_2015_names_and_codes.zip}
-#' (allow the library to do that for you)
-#'
-#' or,
-#'
-#' \bold{OS CodePoint Open} (direct download not available)
-#' \itemize{
-#'  \item request from \url{https://www.ordnancesurvey.co.uk/business-and-government/products/code-point-open.html}
-#'  \item download OS CodePoint Open into a temporary folder
-#'  \item set \code{.default_CodePoint_Unzipped_Path <- "/your/folder/tmp"} in this library
-#' }
-#'
-#' The \bold{OS CodePoint Open} area names are fuller, e.g. "Sandwell District (B)", instead of "Sandwell" from \bold{ONS}
+#' This library therefore supercedes my \pkg{codepoint} library but it still references
+#' Area Code names, which can be obtained from the \bold{ONS} or \bold{OS CodePoint Open}
 #'
 #' @section Notes:
 #' on comparing NHSPD data (November 2015) with OS CodePoint Open 2015.4.0 (October 2015),
@@ -46,6 +20,8 @@
 #'
 #' @section TODO:
 #' TODO: error checking for CodePoint stuff
+#'
+#' @family functions
 #'
 #' @docType package
 #' @name NHSPD
@@ -169,10 +145,20 @@ NULL
 
 #' get CodePoint area codes
 #'
-#' obtain the names of all the area codes from an unzipped OS CodePoint Open zipped file
-#' and compile them into format that I want
+#' obtain the names of all the area codes from an unzipped \emph{OS CodePoint Open} zipped file
+#' and compile them into format that I want.
 #'
-#' @param codepoint.doc.path full path to where we can find the unzipped xls/xlsx files that contain area code names
+#' To download:
+#' \itemize{
+#'  \item request from \url{https://www.ordnancesurvey.co.uk/business-and-government/products/code-point-open.html}
+#'  \item download OS CodePoint Open into a temporary folder e.g. \code{"/your/folder/tmp"}
+#'  \item set \code{.default_CodePoint_Unzipped_Path <- "/your/folder/tmp"} in this library, or,
+#'  \item pass \code{codepoint.doc.path = "/your/folder/tmp/Doc"}
+#' }
+#'
+#' @family functions
+#'
+#' @param codepoint.doc.path full path to where we can find the unzipped \code{Codelist.xls/xlsx} files that contain area code names
 #'
 #' @return data.table, compiled list of all the area codes
 #' @export
@@ -206,11 +192,17 @@ getCodePointAreaCodes <- function( codepoint.doc.path = paste(.default_CodePoint
 
 #' get Area Codes
 #'
-#' load a list from local copy or attempt to download and unzip it
+#' loads the list of Area Codes from local copy or attempts to download and unzip it
+#'
+#' Download and extract \code{LAD_\emph{yyyy}_UK_NC.csv} from
+#' \url{https://geoportal.statistics.gov.uk/Docs/Names\%20and\%20Codes/Local_Authority_Districts_(UK)_2015_names_and_codes.zip}
+#' or allow the library to do that for you.
+#'
+#' @family functions
 #'
 #' @param LAD.file full path to the unzipped file
 #' @param LAD.URL full URL to download
-#' @param year \code{NULL} to guess the latest file, \code{YYYY} to specify
+#' @param year \code{NULL} to guess the latest year, \code{YYYY} to specify
 #' @param force.download Force download of file from source
 #'
 #' @return data.table, columns renamed to AreaID and AreaName
@@ -279,19 +271,32 @@ getAreaCodes <- function( LAD.file = .default_LAD_Datafile,
 
 #' get NHS Postcode Directory
 #'
-#' if RDS file exists, load it
-#' else if data file (zip/csv) exists, process it (and also save as RDS for next time)
-#' else download, process and save
+#' downloads/compiles/re-loads the NHS Postcode Directory in a form that I want
+#'
+#' if RDS file exists, load it\cr
+#' else if data file (zip/csv) exists, process it, and save as RDS for next time\cr
+#' else download, process and save for next time
+#'
+#' Download from:
+#' \itemize{
+#'  \item \url{http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata}
+#'  \item \url{http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata/zip-files/gridall.zip}
+#' }
+#' or allow the library to do that for you.
+#'
+#' The \bold{OS CodePoint Open} area names are fuller, e.g. "Sandwell District (B)", instead of "Sandwell" from \bold{ONS}
+#'
+#' @family functions
 #'
 #' @param gridall.file full path to CSV or ZIP containing gridall.csv
 #' @param gridall.URL full URL to download
 #' @param gridall.RDS full path to saved (processed) data
 #' @param force.download Force download of file from source
 #' @param remake.RDS Rebuild and save the data
-#' @param AreaCodes supply a data.table with area codes.
-#' defaults to \code{getAreaCodes()} but could also use
-#' \code{getCodePointAreaCodes(paste(.default_CodePoint_Unzipped_Path, "Doc", sep = "/"))}
-#' @param codepoint.compatible if \code{remake.RDS==TRUE} - column names to be compatible with my previous codepoint library
+#' @param AreaCodes supply a data.table with area codes.\cr
+#' defaults to \code{\link{getAreaCodes}()} for brief names from ONS \cr
+#' but could also use \code{\link{getCodePointAreaCodes}()} which has fuller names.
+#' @param codepoint.compatible if \code{remake.RDS==TRUE} - column names to be compatible with my previous \pkg{codepoint} library
 #' @param only.England if \code{remake.RDS==TRUE} - only return rows applicable to England
 #'
 #' @return data.table
