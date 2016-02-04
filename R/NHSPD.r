@@ -9,14 +9,36 @@
 #' In particular, each postcode is mapped to a LSOA, so this enables linking to the
 #' Index of Multiple Deprivation.
 #'
+#' @section Sources:
+#'
 #' Download from:
 #' \itemize{
 #'  \item \url{http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata}
 #'  \item \url{http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata/zip-files/gridall.zip}
 #' }
+#' (allow the library to do that for you)
 #'
 #' This library therefore supercedes my \pkg{codepoint} library.
 #'
+#' However it references the area code names.  These can be obtained from:
+#'
+#' \bold{ONS}
+#'
+#' \url{https://geoportal.statistics.gov.uk/Docs/Names\%20and\%20Codes/Local_Authority_Districts_(UK)_2015_names_and_codes.zip}
+#' (allow the library to do that for you)
+#'
+#' or,
+#'
+#' \bold{OS CodePoint Open} (direct download not available)
+#' \itemize{
+#'  \item request from \url{https://www.ordnancesurvey.co.uk/business-and-government/products/code-point-open.html}
+#'  \item download OS CodePoint Open into a temporary folder
+#'  \item set \code{.default_CodePoint_Unzipped_Path <- "/your/folder/tmp"} in this library
+#' }
+#'
+#' The \bold{OS CodePoint Open} area names are fuller, e.g. "Sandwell District (B)", instead of "Sandwell" from \bold{ONS}
+#'
+#' @section Notes:
 #' on comparing NHSPD data (November 2015) with OS CodePoint Open 2015.4.0 (October 2015),
 #' at least the England postcodes with grid coordinates are identical to OS CodePoint
 #' except for 4 postcodes where NHSPD data seems correct if plotted on map
@@ -24,6 +46,7 @@
 #'
 #' @section TODO:
 #' TODO: error checking for CodePoint stuff
+#'
 #' @docType package
 #' @name NHSPD
 NULL
@@ -40,6 +63,9 @@ NULL
 .default_gridall_DataFile <- "H:/DATASETS/HSCIC/gridall.csv" # local copy of download
 .default_gridall_URL <- "http://systems.hscic.gov.uk/data/ods/datadownloads/onsdata/zip-files/gridall.zip"
 .default_gridall_RDS <- "H:/DATASETS/HSCIC/gridall.RDS"
+
+.default_LAD_Datafile <- "H:/DATASETS/OS/Area Codes/LAD_2015_UK_NC.csv" # local copy of extracted download
+.default_LAD_URL <- "https://geoportal.statistics.gov.uk/Docs/Names%20and%20Codes/Local_Authority_Districts_(UK)_2015_names_and_codes.zip"
 
 .default_CodePoint_Unzipped_Path <- "H:/DATASETS/OS/CodePoint/tmp"
 
@@ -120,6 +146,13 @@ NULL
 .codelist.xl.areacodes.sheetname <- "AREA_CODES" # name of sheet within Codelist.xls that has table of the different types of codes
 .nhscodelist.xl.filename <- "NHS_Codelist.xls"
 
+# .change_year ------------------------------------------------------------
+
+.change_year <- function(s, yr = as.numeric(format(Sys.time(), "%Y")) - 1) {
+  # change the year in the URL or data file name to current year - 1, or any specified year
+  return(gsub("_(\\d{4})_",sprintf("_%04d_",as.numeric(yr)),s))
+}
+
 # .read_codelist ----------------------------------------------------------
 
 .read_codelist <- function(sheet,path,NHS=FALSE) {
@@ -141,7 +174,7 @@ NULL
 #'
 #' @param codepoint.doc.path full path to where we can find the unzipped xls/xlsx files that contain area code names
 #'
-#' @return data.frame, compiled list of all the area codes
+#' @return data.table, compiled list of all the area codes
 #' @export
 #'
 #' @examples \dontshow{getCodePointAreaCodes()}
@@ -166,8 +199,81 @@ getCodePointAreaCodes <- function( codepoint.doc.path = paste(.default_CodePoint
   CodePointAreaCodes <- rbind(area_codes,nhs_areas)
   CodePointAreaCodes  <- CodePointAreaCodes[complete.cases(CodePointAreaCodes),]
 
-  return(CodePointAreaCodes)
+  return(as.data.table(CodePointAreaCodes))
 }
+
+# getAreaCodes ------------------------------------------------------------
+
+#' get Area Codes
+#'
+#' load a list from local copy or attempt to download and unzip it
+#'
+#' @param LAD.file full path to the unzipped file
+#' @param LAD.URL full URL to download
+#' @param year \code{NULL} to guess the latest file, \code{YYYY} to specify
+#' @param force.download Force download of file from source
+#'
+#' @return data.table, columns renamed to AreaID and AreaName
+#' @export
+#'
+#' @examples \dontshow{AreaCodes <- getAreaCodes()}
+getAreaCodes <- function( LAD.file = .default_LAD_Datafile,
+                          LAD.URL = .default_LAD_URL,
+                          year = NULL,
+                          force.download = FALSE ) {
+
+  if (is.null(year)) {
+    # guess the latest year
+    LAD.file <- .change_year(LAD.file)
+    LAD.URL <- .change_year(LAD.URL)
+  } else {
+    # specify the year
+    LAD.file <- .change_year(LAD.file, year)
+    LAD.URL <- .change_year(LAD.URL, year)
+
+    if (year <= 2014) {
+      # change ...names_and_codes... to ...Names_and_Codes...
+      # change ...L_A_D... to ...L_a_d...
+      LAD.URL <- gsub("names_and_codes", "Names_and_Codes", LAD.URL)
+      LAD.URL <- gsub("Local_Authority_Districts", "Local_authority_districts", LAD.URL)
+    }
+  }
+
+  LAD.file.zip <- paste0(dirname(LAD.file), "/", basename(LAD.URL))
+  DataFile.missing <- !file.exists(LAD.file)
+
+  if(force.download | DataFile.missing) {
+    if (force.download) {
+      excuse <- "force.download = TRUE"
+    } else {
+      excuse <- "missing local copy"
+    }
+    message(sprintf("getAreaCodes() downloading LAD code names from '%s' to '%s' because: '%s'...", LAD.URL, LAD.file.zip, excuse))
+    download.success <- try(download.file( LAD.URL, destfile = LAD.file.zip, method = "auto")) # should we warn if overwrite?
+    if (download.success == 0) {
+      if (file.exists(LAD.file)) file.remove(LAD.file)
+      message(sprintf("getAreaCodes() unzipping..."))
+      unzip(LAD.file.zip, files = basename(LAD.file), exdir = dirname(LAD.file.zip) ) # should we warn if overwrite?
+    } else {
+      if (DataFile.missing == FALSE) {
+        # download failure (force.download==TRUE), but option to use existing therefore warn, or stop with error
+        message("getAreaCodes() Unable to download from source, re-using existing file.")
+      } else {
+        stop("getAreaCodes() Unable to download from source; no existing file to use.")
+      }
+    }
+  }
+
+  z <- fread(LAD.file) # column names are LADnnCD, LADnnNM where nn is the year
+  setnames(z, c("AreaID", "AreaName")) # these are the names I used in my previous codepoint library
+
+  if(FALSE) {
+    # optionally add a 3rd column with NULL values named AreaType to be consistent with my previous codepoint library
+  }
+
+  return(z)
+}
+
 
 # getNHSPD ----------------------------------------------------------------
 
@@ -182,7 +288,9 @@ getCodePointAreaCodes <- function( codepoint.doc.path = paste(.default_CodePoint
 #' @param gridall.RDS full path to saved (processed) data
 #' @param force.download Force download of file from source
 #' @param remake.RDS Rebuild and save the data
-#' @param codepoint.doc.path if \code{remake.RDS==TRUE} - specify where to find unzipped OS CodePoint documentation - see getCodePointAreaCodes()
+#' @param AreaCodes supply a data.table with area codes.
+#' defaults to \code{getAreaCodes()} but could also use
+#' \code{getCodePointAreaCodes(paste(.default_CodePoint_Unzipped_Path, "Doc", sep = "/"))}
 #' @param codepoint.compatible if \code{remake.RDS==TRUE} - column names to be compatible with my previous codepoint library
 #' @param only.England if \code{remake.RDS==TRUE} - only return rows applicable to England
 #'
@@ -195,8 +303,8 @@ getNHSPD <- function( gridall.file = .default_gridall_DataFile,
                       gridall.RDS = .default_gridall_RDS,
                       force.download = FALSE,
                       remake.RDS = FALSE,
+                      AreaCodes = getAreaCodes( force.download = force.download ),
                       codepoint.compatible = TRUE,
-                      codepoint.doc.path = paste(.default_CodePoint_Unzipped_Path, "Doc", sep = "/"),
                       only.England = TRUE ) {
 
   warning(.citations())
@@ -232,7 +340,7 @@ getNHSPD <- function( gridall.file = .default_gridall_DataFile,
       excuse <- "missing local copy"
     }
     message(sprintf("getNHSPD() downloading gridall.zip from '%s' to '%s' because: '%s'...", gridall.URL, gridall.file.zip, excuse))
-    download.success <- download.file( gridall.URL, destfile = gridall.file.zip, method = "auto") # should we warn if overwrite?
+    download.success <- try(download.file( gridall.URL, destfile = gridall.file.zip, method = "auto")) # should we warn if overwrite?
     if (download.success == 0) {
       if (file.exists(gridall.file)) file.remove(gridall.file)
       message(sprintf("getNHSPD() unzipping..."))
@@ -279,13 +387,9 @@ getNHSPD <- function( gridall.file = .default_gridall_DataFile,
     # z$Admin_county_code <- z$OSCTY # ? to factorise // probably can remove
     z[, Admin_district_code:=OSLAUA] # ? to factorise
 
-    # add codelist (names) from OS CodePoint
-    message("getNHSPD() obtaining area names from local copy of OS CodePoint...")
-    CodePointAreaCodes <- as.data.table(getCodePointAreaCodes(codepoint.doc.path))
-
     # join
     message("getNHSPD() joining areanames with NHSPD...")
-    z <- merge(z, CodePointAreaCodes, by.x = "OSLAUA", by.y = "AreaID", all.x = TRUE)
+    z <- merge(z, AreaCodes, by.x = "OSLAUA", by.y = "AreaID", all.x = TRUE)
   }
 
   # save RDS
